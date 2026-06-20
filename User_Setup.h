@@ -1,4 +1,5 @@
 // See SetupX_Template.h for all options available
+#define USER_SETUP_LOADED
 #define USER_SETUP_ID 2
 
 #define ST7735_DRIVER
@@ -8,26 +9,25 @@
 #define TFT_HEIGHT 160
 
 
-#define ST7735_REDTAB
+#define ST7735_GREENTAB3
 
 // For ST7735, ST7789 and ILI9341 ONLY, define the colour order IF the blue and red are swapped on your display
 // Try ONE option at a time to find the correct colour order for your display
 
-// ===== SPI PINS FOR ESP32 (Do not use Arduino Uno pins) =====
-#define TFT_MOSI 23  // ESP32 GPIO 23
-#define TFT_SCLK 18  // ESP32 GPIO 18
-#define TFT_CS   15   // ESP32 GPIO 5
-#define TFT_DC   2   // ESP32 GPIO 2
-#define TFT_RST  4   // ESP32 GPIO 4
-// #define TFT_BL   21 // Backlight (Optional, connect to 3.3V if unsure)
-//  #define TFT_RGB_ORDER TFT_RGB  // Colour order Red-Green-Blue
+// ===== SPI PINS FOR ESP32-S3 SuperMini wiring =====
+#define USE_HSPI_PORT
+#define TFT_MOSI 12   // GPIO12
+#define TFT_SCLK 13   // GPIO13
+#define TFT_CS    9   // GPIO9
+#define TFT_DC   10   // GPIO10
+#define TFT_RST  11   // GPIO11
+// Backlight is not controlled by GPIO for this wiring (BLK = -1).
+#define TFT_RGB_ORDER TFT_RGB  // 1.8" 128 x RGB x 160 panel
 //  #define TFT_RGB_ORDER TFT_BGR  // Colour order Blue-Green-Red
 
-// For NodeMCU - use pin numbers in the form PIN_Dx where Dx is the NodeMCU pin designation
-#define TFT_CS   PIN_D8  // Chip select control pin D8
-#define TFT_DC   PIN_D3  // Data Command control pin
-#define TFT_RST  PIN_D4  // Reset pin (could connect to NodeMCU RST, see next line)
-//#define TFT_RST  -1    // Set TFT_RST to -1 if the display RESET is connected to NodeMCU RST or 3.3V
+// NodeMCU pin definitions were left here previously and caused macro
+// redefinition warnings during build. They are not relevant to the ESP32-S3
+// target, so they have been removed to keep compiler output clean.
 
 
 #define LOAD_GLCD   // Font 1. Original Adafruit 8 pixel font needs ~1820 bytes in FLASH
@@ -46,7 +46,7 @@
 #define SPI_FREQUENCY  27000000
 // #define SPI_FREQUENCY  40000000
 
-#define SPI_TOUCH_FREQUENCY  2500000
+//#define SPI_TOUCH_FREQUENCY  2500000
 
 
 // #define SUPPORT_TRANSACTIONS

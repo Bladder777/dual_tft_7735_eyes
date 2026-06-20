@@ -57,6 +57,11 @@ void initEyes(void)
 // UPDATE EYE --------------------------------------------------------------
 void updateEye (void)
 {
+#if EYE_SYNC_MODE == 2
+  syncRenderSlaveFrame();
+  return;
+#endif
+
 #if defined(LIGHT_PIN) && (LIGHT_PIN >= 0) // Interactive iris
 
   int16_t v = analogRead(LIGHT_PIN);       // Raw dial/photocell reading
@@ -119,13 +124,14 @@ void drawEye( // Renders one eye.  Inputs must be pre-clipped & valid.
   irisY       = scleraY - (SCLERA_HEIGHT - IRIS_HEIGHT) / 2;
 
   // Eyelid image is left<>right swapped for two displays
+  const bool renderAsRightEye = (EYE_SYNC_SIDE != 0) || ((NUM_EYES > 1) && (e != 0));
   uint16_t lidX = 0;
   uint16_t dlidX = -1;
-  if (e) dlidX = 1;
+  if (renderAsRightEye) dlidX = 1;
   for (screenY = 0; screenY < SCREEN_HEIGHT; screenY++, scleraY++, irisY++) {
     scleraX = scleraXsave;
     irisX   = scleraXsave - (SCLERA_WIDTH - IRIS_WIDTH) / 2;
-    if (e) lidX = 0; else lidX = SCREEN_WIDTH - 1;
+    if (renderAsRightEye) lidX = 0; else lidX = SCREEN_WIDTH - 1;
     for (screenX = 0; screenX < SCREEN_WIDTH; screenX++, scleraX++, irisX++, lidX += dlidX) {
       if ((pgm_read_byte(lower + screenY * SCREEN_WIDTH + lidX) <= lT) ||
           (pgm_read_byte(upper + screenY * SCREEN_WIDTH + lidX) <= uT)) {              // Covered by eyelid
@@ -387,6 +393,7 @@ void frame(uint16_t iScale) // Iris scale (0-1023)
   }
 
   // Pass all the derived values to the eye-rendering function:
+  syncBroadcastFrame(iScale, eyeX, eyeY, n, lThreshold);
   drawEye(eyeIndex, iScale, eyeX, eyeY, n, lThreshold);
 
   if (eyeIndex == (NUM_EYES - 1)) {
