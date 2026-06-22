@@ -8,8 +8,10 @@ The current hardware model is:
 - One ESP32-S3 SuperMini per eye
 - One 1.8 inch ST7735 TFT per ESP32-S3
 - Optional ESP-NOW broadcast sync between boards
-- Left board can act as the motion/blink master
+- Left board can act as the motion/blink master for bench testing
 - Right board can act as a synced slave eye
+- Final robot layout can use a third ESP32-S3 SuperMini running WireClaw as the brain
+- ESP32D servo controller connects to the WireClaw brain S3 over UART
 
 ## Known Working Display Wiring
 
@@ -57,7 +59,8 @@ The project uses the same source code for standalone, master, and slave builds.
 | Environment | Purpose |
 | --- | --- |
 | `esp32-s3-supermini` | Standalone single eye, no ESP-NOW sync |
-| `left_eye_master` | Left eye. Runs the animation and broadcasts sync packets |
+| `left_eye_master` | Bench/test mode. Left eye runs animation and broadcasts sync packets |
+| `left_eye_slave` | Final robot mode. Left eye receives ESP-NOW packets from the WireClaw brain |
 | `right_eye_slave` | Right eye. Receives ESP-NOW packets and follows the master |
 
 The mode is selected with build flags in `platformio.ini`:
@@ -74,6 +77,68 @@ EYE_SYNC_SIDE=1  ; right-style eyelid direction
 The `right_eye_slave` environment uses `EYE_SYNC_SIDE=1`, so the eyelid render
 is mirrored for the right eye. This is the "butterfly" behavior: the two eyes
 use opposite eyelid directions rather than both behaving like left eyes.
+
+## WireClaw Brain / ESP32D / Eye Sync Plan
+
+The intended final robot layout uses three ESP32-S3 SuperMini boards plus the
+ESP32D servo controller.
+
+Recommended roles:
+
+| Board | Job |
+| --- | --- |
+| WireClaw ESP32-S3 SuperMini | Main brain. Runs WireClaw, decides movement/expression, sends UART commands to ESP32D, and broadcasts ESP-NOW eye packets |
+| ESP32D | Servo controller. Receives UART commands from WireClaw S3 and drives the servos |
+| Left-eye ESP32-S3 SuperMini | Display-only eye board. Runs `left_eye_slave` and follows ESP-NOW packets |
+| Right-eye ESP32-S3 SuperMini | Display-only eye board. Runs `right_eye_slave` and follows ESP-NOW packets |
+
+Preferred signal flow:
+
+```text
+WireClaw brain S3 --UART--> ESP32D servo controller --> pan/tilt servos
+WireClaw brain S3 --ESP-NOW broadcast--> left-eye S3 + right-eye S3
+```
+
+Do not make the ESP32D or the left eye relay ESP-NOW unless there is a strong
+reason. The WireClaw brain already knows the intended movement and expression,
+so it should send the same timed command directly to both eye display boards.
+
+The WireClaw brain broadcasts eye packets on its connected Wi-Fi channel. The
+eye slave builds use `EYE_SYNC_CHANNEL=0`, which makes them hop channels until
+they hear the brain, then stay on that channel while packets are fresh.
+
+The validated WireClaw UART bridge pins belong on the WireClaw brain S3, not
+on the eye display boards:
+
+| Signal | ESP32-S3 SuperMini | ESP32D |
+| --- | --- | --- |
+| UART TX from S3 | GPIO1 | GPIO16 / RX2 |
+| UART RX to S3 | GPIO2 | GPIO17 / TX2 |
+| Ground | GND | GND |
+
+Wire TX to RX and RX to TX:
+
+```text
+WireClaw S3 GPIO1 TX  -> ESP32D GPIO16 RX2
+WireClaw S3 GPIO2 RX  <- ESP32D GPIO17 TX2
+WireClaw S3 GND       <-> ESP32D GND
+```
+
+Do not use GPIO20 for this bridge. On the ESP32-S3 SuperMini it is tied to
+native USB and should stay free for flashing and serial monitor access.
+
+This eye firmware is display firmware only. It does not currently include the
+WireClaw UART command layer. For the final robot layout, WireClaw should send
+ESP-NOW packets compatible with this eye firmware, then both eye boards can run
+as slaves:
+
+```powershell
+pio run -e left_eye_slave --target upload
+pio run -e right_eye_slave --target upload
+```
+
+The old `left_eye_master` environment is still useful for bench testing two eye
+boards without the third WireClaw brain installed.
 
 ## Flashing
 

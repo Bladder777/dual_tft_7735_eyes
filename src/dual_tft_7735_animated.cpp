@@ -10,6 +10,7 @@
 #if EYE_SYNC_MODE != 0
   #include <WiFi.h>
   #include <esp_now.h>
+  #include <esp_wifi.h>
 #endif
 TFT_eSPI tft;           // A single instance is used for 1 or 2 displays
 
@@ -19,6 +20,10 @@ TFT_eSPI tft;           // A single instance is used for 1 or 2 displays
 
 #ifndef EYE_SYNC_SIDE
   #define EYE_SYNC_SIDE 0
+#endif
+
+#ifndef EYE_SYNC_CHANNEL
+  #define EYE_SYNC_CHANNEL 0
 #endif
 
 #if EYE_SYNC_MODE != 0
@@ -43,6 +48,8 @@ static volatile bool syncPacketPending = false;
 static EyeSyncPacket syncLatestPacket = {};
 static uint32_t syncLastPacketMs = 0;
 static uint32_t syncSequence = 0;
+static uint8_t syncCurrentChannel = 1;
+static uint32_t syncLastChannelHopMs = 0;
 
 static void onEyeSyncReceive(const esp_now_recv_info_t *info, const uint8_t *data, int len) {
   (void)info;
@@ -117,6 +124,10 @@ void setupEyeSync(void) {
 #if EYE_SYNC_MODE != 0
   WiFi.mode(WIFI_STA);
   WiFi.disconnect();
+  #if EYE_SYNC_CHANNEL > 0
+    syncCurrentChannel = EYE_SYNC_CHANNEL;
+    esp_wifi_set_channel(syncCurrentChannel, WIFI_SECOND_CHAN_NONE);
+  #endif
 
   if (esp_now_init() != ESP_OK) {
     Serial.println("ESP-NOW init failed");
@@ -138,7 +149,30 @@ void setupEyeSync(void) {
   esp_now_register_recv_cb(onEyeSyncReceive);
   Serial.print("ESP-NOW slave MAC: ");
   Serial.println(WiFi.macAddress());
+  #if EYE_SYNC_CHANNEL > 0
+    Serial.print("ESP-NOW slave fixed channel: ");
+    Serial.println(syncCurrentChannel);
+  #else
+    Serial.println("ESP-NOW slave channel hop enabled");
+  #endif
 #endif
+#endif
+}
+
+static void syncHopChannelIfNeeded(bool fresh) {
+#if EYE_SYNC_MODE == 2
+  #if EYE_SYNC_CHANNEL == 0
+    if (fresh) return;
+    if ((millis() - syncLastChannelHopMs) < 500) return;
+    syncLastChannelHopMs = millis();
+    syncCurrentChannel++;
+    if (syncCurrentChannel > 13) syncCurrentChannel = 1;
+    esp_wifi_set_channel(syncCurrentChannel, WIFI_SECOND_CHAN_NONE);
+  #else
+    (void)fresh;
+  #endif
+#else
+  (void)fresh;
 #endif
 }
 
@@ -169,6 +203,7 @@ void syncRenderSlaveFrame(void) {
 #if EYE_SYNC_MODE == 2
   static uint32_t frames = 0;
   static bool reportedWaiting = false;
+  static uint32_t lastStateReportMs = 0;
   if (!(++frames & 255)) {
     float elapsed = (millis() - startTime) / 1000.0;
     if (elapsed) Serial.println((uint16_t)(frames / elapsed));
@@ -176,6 +211,12 @@ void syncRenderSlaveFrame(void) {
 
   EyeSyncPacket packet = syncLatestPacket;
   bool fresh = syncPacketPending && ((millis() - syncLastPacketMs) <= EYE_SYNC_TIMEOUT_MS);
+  syncHopChannelIfNeeded(fresh);
+  if ((millis() - lastStateReportMs) > 2000) {
+    Serial.print(fresh ? "ESP-NOW slave receiving on channel " : "ESP-NOW slave fallback, hopping channel ");
+    Serial.println(syncCurrentChannel);
+    lastStateReportMs = millis();
+  }
   if (fresh) {
     reportedWaiting = false;
     drawEye(0, packet.irisScale, packet.scleraX, packet.scleraY,
@@ -209,7 +250,6 @@ void setup(void) {
 
   // User call for additional features
   user_setup();
-  setupEyeSync();
 
   // Initialise the eye(s), this will set all chip selects low for the tft.init()
   initEyes();
@@ -229,9 +269,15 @@ void setup(void) {
   for (uint8_t e = 0; e < NUM_EYES; e++) {
     digitalWrite(eye[e].tft_cs, LOW);
     tft.setRotation(eyeInfo[e].rotation);
+    tft.fillScreen(TFT_MAGENTA);
+    delay(150);
+    tft.fillRect(0, 0, 128, 128, TFT_CYAN);
+    delay(150);
     tft.fillScreen(TFT_BLACK);
     digitalWrite(eye[e].tft_cs, HIGH);
   }
+
+  setupEyeSync();
 
 #if defined(DISPLAY_BACKLIGHT) && (DISPLAY_BACKLIGHT >= 0)
   Serial.println("Backlight now on!");

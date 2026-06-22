@@ -42,6 +42,12 @@
 #define LH_WINK_PIN -1 // Left wink pin (set to -1 for no pin)
 #define RH_WINK_PIN -1 // Right wink pin (set to -1 for no pin)
 
+// Final robot note: the ESP32D servo bridge belongs on the separate WireClaw
+// brain S3, not on these eye display boards.
+// WireClaw S3 GPIO1 = UART TX -> ESP32D GPIO16 RX2
+// WireClaw S3 GPIO2 = UART RX <- ESP32D GPIO17 TX2
+// Keep GPIO20 free because it is native USB on the ESP32-S3 SuperMini.
+
 // This table contains ONE LINE PER EYE.  The table MUST be present with
 // this name and contain ONE OR MORE lines.  Each line contains THREE items:
 // a pin number for the corresponding TFT/OLED display's SELECT line, a pin
