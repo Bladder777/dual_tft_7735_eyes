@@ -140,6 +140,22 @@ pio run -e right_eye_slave --target upload
 The old `left_eye_master` environment is still useful for bench testing two eye
 boards without the third WireClaw brain installed.
 
+## Full Firmware Bundle
+
+The full JAFR firmware stack is kept in this repo:
+
+| Path | Firmware |
+| --- | --- |
+| project root | Eye display firmware |
+| `firmware/wireclaw-brain` | WireClaw brain ESP32-S3 firmware |
+| `firmware/esp32d-servo-bridge` | ESP32D servo bridge firmware |
+
+Build everything from the project root:
+
+```powershell
+.\tools\build-all-firmware.ps1
+```
+
 ## Flashing
 
 The most reliable upload path for the tested ESP32-S3 SuperMini was COM13 with

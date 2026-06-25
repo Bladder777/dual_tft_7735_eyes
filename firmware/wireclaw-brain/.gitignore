@@ -1,0 +1,7 @@
+.pio
+data/config.json
+data/config.json.openrouter
+data/config.json.ollama
+tmp/
+platformio.esp32s3-local.ini
+
