@@ -41,6 +41,22 @@ intentional. Firmware-only reflashes preserve the existing LittleFS config on
 the brain. For a brand-new brain, use the setup portal or copy one of the
 example config files and fill in the private values locally.
 
+This workstation also has an ignored local backup of the real WireClaw data at:
+
+```text
+private/wireclaw-brain/data
+```
+
+That folder is not committed to git because it contains Wi-Fi/API/Telegram
+configuration. If the brain filesystem must be rebuilt, restore the private
+data into the bundled WireClaw project with:
+
+```powershell
+.\tools\restore-private-wireclaw-data.ps1
+```
+
+Then upload LittleFS from `firmware/wireclaw-brain`.
+
 The ESP32D bridge currently builds with `SERVO_OUTPUT_ENABLE=0`, so it is safe
 to flash before the servos are attached. Enable servo output only when the
 mechanics are mounted and ready.

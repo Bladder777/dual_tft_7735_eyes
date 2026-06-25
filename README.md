@@ -156,6 +156,11 @@ Build everything from the project root:
 .\tools\build-all-firmware.ps1
 ```
 
+Private WireClaw runtime data is backed up locally, outside git, at
+`private/wireclaw-brain/data`. Use `.\tools\restore-private-wireclaw-data.ps1`
+to copy it back into `firmware/wireclaw-brain/data` before rebuilding or
+uploading LittleFS for a brand-new brain board.
+
 ## Flashing
 
 The most reliable upload path for the tested ESP32-S3 SuperMini was COM13 with
