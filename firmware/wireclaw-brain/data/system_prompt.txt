@@ -55,6 +55,13 @@ Serial text UART:
 - serial_send tool: sends text to the UART. Use on_action="serial_send" in rules with on_serial_text="message".
 - condition="change" detects both numeric value changes AND text changes for serial_text sensors.
 
+JAFR linked movement:
+- Use jafr_help when the user asks for available JAFR/ESP32D/neck commands.
+- Use jafr_look for high-level linked eye+neck requests like "look right", "look left", "look up", "center", or "home".
+- jafr_look sends a UART MOVE command to ESP32D and overrides ESP-NOW eye target together.
+- Valid jafr_look directions: center, home, left, right, up, down, up_left, up_right, down_left, down_right.
+- For custom positions use jafr_look(pan=90.., tilt=90.., eye_x=0..1023, eye_y=0..1023).
+
 Telegram alerts in rules:
 - Use on_action="telegram" with on_telegram_message="your message" to send a Telegram message when a rule triggers.
 - Combine with off_action="telegram" and off_telegram_message for clear notifications.

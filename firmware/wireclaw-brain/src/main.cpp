@@ -79,6 +79,10 @@ static uint32_t eyeMoveDurationUs = 0;
 static uint16_t eyeIrisScale = (EYE_IRIS_MIN + EYE_IRIS_MAX) / 2;
 static uint16_t eyeIrisTarget = (EYE_IRIS_MIN + EYE_IRIS_MAX) / 2;
 static uint32_t eyeNextIrisMs = 0;
+static bool eyeTargetOverride = false;
+static int16_t eyeOverrideX = 512;
+static int16_t eyeOverrideY = 512;
+static uint32_t eyeOverrideUntilMs = 0;
 
 /* Runtime config - loaded from LittleFS, falls back to secrets.h */
 char cfg_wifi_ssid[64];
@@ -463,6 +467,21 @@ static void chooseNewEyeTarget() {
 }
 
 static void updateEyeMotion(int16_t *scleraX, int16_t *scleraY) {
+    uint32_t nowMs = millis();
+    if (eyeTargetOverride && nowMs < eyeOverrideUntilMs) {
+        *scleraX = mapEyeCoord(eyeOverrideX, EYE_SCLERA_WIDTH - EYE_SCREEN_WIDTH);
+        *scleraY = mapEyeCoord(eyeOverrideY, EYE_SCLERA_HEIGHT - EYE_SCREEN_HEIGHT);
+        return;
+    }
+    if (eyeTargetOverride) {
+        eyeTargetOverride = false;
+        eyeOldX = eyeOverrideX;
+        eyeOldY = eyeOverrideY;
+        eyeMoveStartUs = micros();
+        eyeMoveDurationUs = random(120000, 900000);
+        eyeMoveInMotion = false;
+    }
+
     uint32_t nowUs = micros();
     uint32_t dt = nowUs - eyeMoveStartUs;
     int16_t rawX = eyeOldX;
@@ -491,6 +510,14 @@ static void updateEyeMotion(int16_t *scleraX, int16_t *scleraY) {
 
     *scleraX = mapEyeCoord(rawX, EYE_SCLERA_WIDTH - EYE_SCREEN_WIDTH);
     *scleraY = mapEyeCoord(rawY, EYE_SCLERA_HEIGHT - EYE_SCREEN_HEIGHT);
+}
+
+void jafrEyeLook(int16_t rawX, int16_t rawY, uint32_t holdMs) {
+    eyeOverrideX = constrain(rawX, 0, 1023);
+    eyeOverrideY = constrain(rawY, 0, 1023);
+    eyeOverrideUntilMs = millis() + holdMs;
+    eyeTargetOverride = true;
+    eyeMoveInMotion = false;
 }
 
 static uint16_t updateEyeIris(uint32_t now) {
@@ -1181,7 +1208,7 @@ static void onNatsCapabilities(nats_client_t *client, const nats_msg_t *msg,
         "\"file_read\",\"file_write\",\"nats_publish\",\"temperature_read\","
         "\"device_register\",\"device_list\",\"device_remove\",\"sensor_read\","
         "\"actuator_set\",\"rule_create\",\"rule_list\",\"rule_delete\","
-        "\"rule_enable\",\"serial_send\",\"chain_create\"],");
+        "\"rule_enable\",\"serial_send\",\"jafr_help\",\"jafr_look\",\"chain_create\"],");
 
     /* Devices */
     w += snprintf(toolCallJsonBuf + w, sizeof(toolCallJsonBuf) - w, "\"devices\":[");

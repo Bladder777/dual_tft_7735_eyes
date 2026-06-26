@@ -28,6 +28,7 @@ extern bool g_led_user;
 extern NatsClient natsClient;
 extern bool g_nats_connected;
 extern bool g_nats_enabled;
+extern void jafrEyeLook(int16_t rawX, int16_t rawY, uint32_t holdMs);
 #if WIRECLAW_HAS_TEMP_SENSOR
 extern temperature_sensor_handle_t g_temp_sensor;
 #endif
@@ -111,6 +112,8 @@ static const char *TOOLS_JSON = R"JSON([
 {"type":"function","function":{"name":"rule_delete","description":"Delete rule by ID (e.g. rule_01), or pass 'all' to delete every rule at once.","parameters":{"type":"object","properties":{"rule_id":{"type":"string","description":"Rule ID or 'all'"}},"required":["rule_id"]}}},
 {"type":"function","function":{"name":"rule_enable","description":"Enable/disable rule","parameters":{"type":"object","properties":{"rule_id":{"type":"string"},"enabled":{"type":"boolean"}},"required":["rule_id","enabled"]}}},
 {"type":"function","function":{"name":"serial_send","description":"Send text over serial_text UART","parameters":{"type":"object","properties":{"text":{"type":"string","description":"Text to send (newline appended)"}},"required":["text"]}}},
+{"type":"function","function":{"name":"jafr_help","description":"Show compact JAFR neck/ESP32D command cheat sheet","parameters":{"type":"object","properties":{}}}}},
+{"type":"function","function":{"name":"jafr_look","description":"Linked JAFR look command: sends ESP32D UART MOVE and overrides ESP-NOW eye target. Directions: center,left,right,up,down,up_left,up_right,down_left,down_right,home or custom pan/tilt/eye_x/eye_y.","parameters":{"type":"object","properties":{"direction":{"type":"string"},"pan":{"type":"integer"},"tilt":{"type":"integer"},"eye_x":{"type":"integer"},"eye_y":{"type":"integer"},"hold_ms":{"type":"integer"}}}}},
 {"type":"function","function":{"name":"remote_chat","description":"Chat with another WireClaw device via NATS","parameters":{"type":"object","properties":{"device":{"type":"string"},"message":{"type":"string"}},"required":["device","message"]}}},
 {"type":"function","function":{"name":"chain_create","description":"Create multi-step automation chain (up to 5 steps) in one call. Steps execute in order with delays.","parameters":{"type":"object","properties":{"sensor_name":{"type":"string","description":"Sensor to monitor"},"condition":{"type":"string","description":"gt|lt|eq|neq|change|always"},"threshold":{"type":"integer"},"interval_seconds":{"type":"integer"},"step1_action":{"type":"string","description":"telegram|led_set|gpio_write|nats_publish|actuator|serial_send"},"step1_message":{"type":"string","description":"For telegram/nats/serial_send"},"step1_r":{"type":"integer"},"step1_g":{"type":"integer"},"step1_b":{"type":"integer"},"step1_pin":{"type":"integer"},"step1_value":{"type":"integer"},"step1_actuator":{"type":"string"},"step1_nats_subject":{"type":"string"},"step2_action":{"type":"string","description":"Action after step1"},"step2_delay":{"type":"integer","description":"Seconds before step2"},"step2_message":{"type":"string"},"step2_r":{"type":"integer"},"step2_g":{"type":"integer"},"step2_b":{"type":"integer"},"step2_pin":{"type":"integer"},"step2_value":{"type":"integer"},"step2_actuator":{"type":"string"},"step2_nats_subject":{"type":"string"},"step3_action":{"type":"string","description":"Step3 (optional)"},"step3_delay":{"type":"integer","description":"Seconds before step3"},"step3_message":{"type":"string"},"step3_r":{"type":"integer"},"step3_g":{"type":"integer"},"step3_b":{"type":"integer"},"step3_pin":{"type":"integer"},"step3_value":{"type":"integer"},"step3_actuator":{"type":"string"},"step3_nats_subject":{"type":"string"},"step4_action":{"type":"string","description":"Step4 (optional)"},"step4_delay":{"type":"integer","description":"Seconds before step4"},"step4_message":{"type":"string"},"step4_r":{"type":"integer"},"step4_g":{"type":"integer"},"step4_b":{"type":"integer"},"step4_pin":{"type":"integer"},"step4_value":{"type":"integer"},"step4_actuator":{"type":"string"},"step4_nats_subject":{"type":"string"},"step5_action":{"type":"string","description":"Step5 (optional)"},"step5_delay":{"type":"integer","description":"Seconds before step5"},"step5_message":{"type":"string"},"step5_r":{"type":"integer"},"step5_g":{"type":"integer"},"step5_b":{"type":"integer"},"step5_pin":{"type":"integer"},"step5_value":{"type":"integer"},"step5_actuator":{"type":"string"},"step5_nats_subject":{"type":"string"}},"required":["sensor_name","condition","threshold","step1_action","step2_action"]}}}
 ])JSON";
@@ -861,6 +864,60 @@ static void tool_serial_send(const char *args, char *result, int result_len) {
     }
 }
 
+static void tool_jafr_help(const char *args, char *result, int result_len) {
+    (void)args;
+    snprintf(result, result_len,
+        "ESP32D UART: PING, STATUS, HOME, PAN n, TILT n, MOVE pan tilt, ENABLE, DISABLE. "
+        "Linked: jafr_look direction=center/left/right/up/down/up_left/up_right/down_left/down_right/home.");
+}
+
+static void tool_jafr_look(const char *args, char *result, int result_len) {
+    int pan = jsonArgInt(args, "pan", 90);
+    int tilt = jsonArgInt(args, "tilt", 90);
+    int eyeX = jsonArgInt(args, "eye_x", 512);
+    int eyeY = jsonArgInt(args, "eye_y", 512);
+    int holdMs = jsonArgInt(args, "hold_ms", 1800);
+
+    char direction[24] = "";
+    if (jsonArgString(args, "direction", direction, sizeof(direction))) {
+        if (strcmp(direction, "left") == 0) {
+            pan = 60; tilt = 90; eyeX = 180; eyeY = 512;
+        } else if (strcmp(direction, "right") == 0) {
+            pan = 120; tilt = 90; eyeX = 844; eyeY = 512;
+        } else if (strcmp(direction, "up") == 0) {
+            pan = 90; tilt = 65; eyeX = 512; eyeY = 180;
+        } else if (strcmp(direction, "down") == 0) {
+            pan = 90; tilt = 115; eyeX = 512; eyeY = 844;
+        } else if (strcmp(direction, "up_left") == 0) {
+            pan = 60; tilt = 65; eyeX = 180; eyeY = 180;
+        } else if (strcmp(direction, "up_right") == 0) {
+            pan = 120; tilt = 65; eyeX = 844; eyeY = 180;
+        } else if (strcmp(direction, "down_left") == 0) {
+            pan = 60; tilt = 115; eyeX = 180; eyeY = 844;
+        } else if (strcmp(direction, "down_right") == 0) {
+            pan = 120; tilt = 115; eyeX = 844; eyeY = 844;
+        } else if (strcmp(direction, "home") == 0 || strcmp(direction, "center") == 0) {
+            pan = 90; tilt = 90; eyeX = 512; eyeY = 512;
+        }
+    }
+
+    pan = constrain(pan, 20, 160);
+    tilt = constrain(tilt, 35, 145);
+    eyeX = constrain(eyeX, 0, 1023);
+    eyeY = constrain(eyeY, 0, 1023);
+    holdMs = constrain(holdMs, 250, 10000);
+
+    jafrEyeLook((int16_t)eyeX, (int16_t)eyeY, (uint32_t)holdMs);
+
+    char cmd[32];
+    snprintf(cmd, sizeof(cmd), "MOVE %d %d", pan, tilt);
+    bool sent = serialTextActive() && serialTextSend(cmd);
+    snprintf(result, result_len,
+        "%s; eyes x=%d y=%d hold=%dms; neck %s",
+        sent ? "Linked look sent" : "Eyes moved, UART not active",
+        eyeX, eyeY, holdMs, sent ? cmd : "not sent");
+}
+
 /*============================================================================
  * Multi-Device Tool Handler
  *============================================================================*/
@@ -1167,6 +1224,10 @@ bool toolExecute(const char *name, const char *args_json,
         tool_rule_enable(args_json, result, result_len);
     } else if (strcmp(name, "serial_send") == 0) {
         tool_serial_send(args_json, result, result_len);
+    } else if (strcmp(name, "jafr_help") == 0) {
+        tool_jafr_help(args_json, result, result_len);
+    } else if (strcmp(name, "jafr_look") == 0) {
+        tool_jafr_look(args_json, result, result_len);
     } else if (strcmp(name, "remote_chat") == 0) {
         tool_remote_chat(args_json, result, result_len);
     } else if (strcmp(name, "chain_create") == 0) {

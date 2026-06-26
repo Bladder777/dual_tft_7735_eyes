@@ -40,8 +40,9 @@ What is not fully proven yet:
   time.
 - Real servo movement, because the ESP32D bridge currently builds with servo
   output disabled for safe bench testing.
-- Automatic "look right" coupling where WireClaw sends one semantic command and
-  both the neck servos and eye ESP-NOW target move together.
+- Physical proof of automatic "look right" coupling. The firmware now has a
+  `jafr_look` tool that sends both the UART `MOVE pan tilt` command and an
+  ESP-NOW eye target override, but it still needs all-up hardware verification.
 
 ## Hardware Roles
 
@@ -90,13 +91,12 @@ Expected today:
 - Telegram/WireClaw can be asked to send serial commands such as `PING`,
   `STATUS`, or `MOVE 120 90`.
 
-Not expected yet:
+Expected after this implementation:
 
-- A single natural phrase like "look right" automatically driving both the
-  ESP32D neck servos and the exact ESP-NOW eye gaze direction in a linked way.
+- A natural phrase like "look right" should cause WireClaw to use `jafr_look`,
+  which drives both the ESP32D neck target and the ESP-NOW eye target together.
 
-That final coupling needs a small command layer in the brain firmware or a
-WireClaw tool/rule convention that maps high-level gaze/neck intent to both:
+That coupling maps high-level gaze/neck intent to both:
 
 ```text
 1. UART command to ESP32D, e.g. MOVE 120 90
@@ -318,6 +318,31 @@ Implementation options:
 The current brain eye generator is autonomous. It is not yet controlled by
 Telegram movement phrases.
 
+## JAFR Telegram Commands
+
+Ask WireClaw:
+
+```text
+show JAFR commands
+look left
+look right
+look up
+look down
+center
+home
+look up right
+move neck to pan 120 tilt 90
+send PING to ESP32D
+read c3servo
+```
+
+The compact UART command box is returned by the `jafr_help` tool:
+
+```text
+ESP32D UART: PING, STATUS, HOME, PAN n, TILT n, MOVE pan tilt, ENABLE, DISABLE.
+Linked: jafr_look direction=center/left/right/up/down/up_left/up_right/down_left/down_right/home.
+```
+
 ## Handover Prompt For Another Model
 
 Use this if another model/provider must continue:
@@ -349,11 +374,11 @@ Current status:
 
 Do not commit private/wireclaw-brain/data.
 
-Next needed feature:
-Add linked movement so a high-level WireClaw command like "look right" sends both:
+Recently added feature:
+The WireClaw brain has a jafr_look tool. It sends both:
 1. UART MOVE pan tilt to ESP32D
 2. ESP-NOW eye target override to both eyes
-Currently the brain's ESP-NOW eye motion is autonomous and not linked to neck commands.
+Next work is hardware verification and tuning pan/tilt/eye_x/eye_y mappings.
 
 Before editing, run:
 git status --short --branch
