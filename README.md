@@ -140,10 +140,10 @@ pio run -e right_eye_slave --target upload
 The old `left_eye_master` environment is still useful for bench testing two eye
 boards without the third WireClaw brain installed.
 
-Current checkpoint limitation: the WireClaw brain broadcasts autonomous synced
-eye motion and can send UART text commands to the ESP32D, but high-level linked
-neck+eye commands such as "look right" are not fully implemented yet. See
-`docs/EVAL_HANDOVER.md` for the exact evaluation state.
+Current checkpoint note: the WireClaw brain now has a linked `jafr_look` tool
+that sends UART neck targets and ESP-NOW eye target overrides together. This is
+built but still needs all-up hardware verification. See `docs/EVAL_HANDOVER.md`
+for the exact evaluation state.
 
 ## Full Firmware Bundle
 
@@ -154,6 +154,8 @@ The full JAFR firmware stack is kept in this repo:
 | project root | Eye display firmware |
 | `firmware/wireclaw-brain` | WireClaw brain ESP32-S3 firmware |
 | `firmware/esp32d-servo-bridge` | ESP32D servo bridge firmware |
+
+The subsystem boundary and roadmap are documented in `ARCHITECTURE.md`.
 
 Build everything from the project root:
 
