@@ -127,10 +127,10 @@ WireClaw S3 GND       <-> ESP32D GND
 Do not use GPIO20 for this bridge. On the ESP32-S3 SuperMini it is tied to
 native USB and should stay free for flashing and serial monitor access.
 
-This eye firmware is display firmware only. It does not currently include the
-WireClaw UART command layer. For the final robot layout, WireClaw should send
-ESP-NOW packets compatible with this eye firmware, then both eye boards can run
-as slaves:
+This eye firmware is display firmware only. That is intentional and does not
+block the final robot layout. The eye boards should not run WireClaw, Telegram,
+UART, or servo code. The WireClaw brain owns those jobs and sends ESP-NOW
+packets compatible with this eye firmware, then both eye boards run as slaves:
 
 ```powershell
 pio run -e left_eye_slave --target upload
@@ -139,6 +139,11 @@ pio run -e right_eye_slave --target upload
 
 The old `left_eye_master` environment is still useful for bench testing two eye
 boards without the third WireClaw brain installed.
+
+Current checkpoint limitation: the WireClaw brain broadcasts autonomous synced
+eye motion and can send UART text commands to the ESP32D, but high-level linked
+neck+eye commands such as "look right" are not fully implemented yet. See
+`docs/EVAL_HANDOVER.md` for the exact evaluation state.
 
 ## Full Firmware Bundle
 
