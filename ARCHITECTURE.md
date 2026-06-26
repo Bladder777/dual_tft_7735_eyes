@@ -131,6 +131,10 @@ jafr_look(pan=120, tilt=90, eye_x=844, eye_y=512)
 | `firmware/esp32d-servo-bridge` | Neck/muscle bridge firmware |
 | `private/wireclaw-brain/data` | Local ignored backup of real WireClaw runtime data |
 | `docs/EVAL_HANDOVER.md` | Current evaluation state and handover notes |
+| `docs/PINOUT.md` | Hardware pin source of truth |
+| `docs/PROTOCOL.md` | ESP-NOW, UART, and linked command contracts |
+| `docs/ROADMAP.md` | Milestone plan |
+| `docs/CONFIGURATION_MAP.md` | Where each kind of configuration currently lives |
 
 ## Roadmap
 

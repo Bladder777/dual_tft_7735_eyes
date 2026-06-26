@@ -298,7 +298,8 @@ Then rebuild and flash the ESP32D. Test `HOME`, then small movements first.
 
 ### 5. Linked Neck And Eye Movement
 
-This is the next software feature, not a proven checkpoint feature.
+This is implemented in the WireClaw brain firmware and still needs all-up
+hardware verification.
 
 Goal:
 
@@ -309,14 +310,12 @@ WireClaw brain also overrides ESP-NOW eye target to the right
 Both happen together
 ```
 
-Implementation options:
+Implemented path:
 
-- Add a WireClaw tool such as `jafr_look(pan, tilt, eye_x, eye_y)`.
-- Or add a serial command convention and an ESP-NOW override state in
-  `firmware/wireclaw-brain/src/main.cpp`.
-
-The current brain eye generator is autonomous. It is not yet controlled by
-Telegram movement phrases.
+- WireClaw uses `jafr_look`.
+- `jafr_look` sends UART `MOVE pan tilt` to ESP32D.
+- `jafr_look` also applies a temporary ESP-NOW eye target override.
+- After the override window, autonomous gaze resumes.
 
 ## JAFR Telegram Commands
 

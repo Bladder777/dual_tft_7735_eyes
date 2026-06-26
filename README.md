@@ -157,6 +157,16 @@ The full JAFR firmware stack is kept in this repo:
 
 The subsystem boundary and roadmap are documented in `ARCHITECTURE.md`.
 
+Review-facing subsystem docs:
+
+| Document | Purpose |
+| --- | --- |
+| `docs/PINOUT.md` | Hardware pin source of truth |
+| `docs/PROTOCOL.md` | ESP-NOW, UART, and linked command contracts |
+| `docs/ROADMAP.md` | Milestones from current foundation to autonomy |
+| `docs/CONFIGURATION_MAP.md` | Current answer to "which file do I edit?" |
+| `docs/EVAL_HANDOVER.md` | Current test/evaluation handover |
+
 Build everything from the project root:
 
 ```powershell
