@@ -327,3 +327,5 @@ monitor_port = COM13
 - 40 MHz may work, but test for display corruption before keeping it.
 - DMA is currently off. At roughly 54 FPS per eye, DMA is not needed yet.
 - Flash is configured as 4 MB DIO to match the actual tested ESP32-S3 SuperMini.
+#   R e a l i s t i c - E y e s - w i t h - B r a i n - 4 - x - m c u -  
+ 
